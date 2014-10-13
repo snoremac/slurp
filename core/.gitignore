@@ -1,0 +1,8 @@
+app/parse-request
+*.o
+*.dot
+*.png
+*.so
+slurp/request.c
+*_test_runner.c
+*-test
