@@ -28,8 +28,6 @@ void setUp() {
   slurp_init_request_parser();
   slurp_on_request(request_callback);
 
-  request_input_index = 0;
-
   memset(requests, 0, sizeof(struct slurp_request) * MAX_REQUESTS);
   memset(errors, 0, sizeof(struct slurp_error) * MAX_ERRORS);
   request_count = 0;
@@ -46,8 +44,33 @@ void test_request_without_args(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
+void test_split_request_without_args(){
+  parse("~chas");
+  parse("er");
+  parse(",");
+  parse("st");
+  parse("art");
+  parse("~");
+  TEST_ASSERT_EQUAL_UINT(1, request_count);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
+  TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
+}
+
 void test_consecutive_requests_no_args(){
   parse("~chaser,start~~chaser,stop~");
+  TEST_ASSERT_EQUAL_UINT(2, request_count);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
+  TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[1].program);
+  TEST_ASSERT_EQUAL_STRING("stop", requests[1].request);
+}
+
+void test_consecutive_split_requests_no_args(){
+  parse("~chas");
+  parse("er,sta");
+  parse("rt~~");
+  parse("chaser");
+  parse(",stop~");
   TEST_ASSERT_EQUAL_UINT(2, request_count);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
@@ -124,7 +147,8 @@ void test_consecutive_requests_and_errors(){
 }
 
 static void parse(const char* input) {
-  strlcpy(request_input, input, fmin(strlen(input) + 1, sizeof(request_input)));
+  strncpy(request_input, input, sizeof(request_input));
+  request_input_index = 0;
   slurp_parse_request(read_callback, error_callback);
 }
 
