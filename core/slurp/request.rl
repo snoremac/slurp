@@ -21,7 +21,7 @@
   }
 
   action end_frame {
-    request_callback(current_request);
+    request_callback(&current_request);
     fgoto main;
   }
 

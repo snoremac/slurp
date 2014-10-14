@@ -12,7 +12,7 @@
 
 static void parse(const char* input);
 static uint8_t read_callback(char* dest, uint8_t max_read);
-static void request_callback(struct slurp_request request);
+static void request_callback(struct slurp_request* request);
 
 static char request_input[REQUEST_INPUT_SIZE];
 static int8_t request_input_index;
@@ -77,8 +77,8 @@ static uint8_t read_callback(char* dest, uint8_t max_read) {
   return i;
 }
 
-static void request_callback(struct slurp_request request) {
+static void request_callback(struct slurp_request* request) {
   if (request_count < MAX_REQUESTS) {
-    requests[request_count++] = request;
+    requests[request_count++] = *request;
   }
 }

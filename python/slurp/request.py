@@ -10,7 +10,7 @@ def init():
 
   global READ_CALLBACK, REQUEST_CALLBACK
   READ_CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_int)
-  REQUEST_CALLBACK = CFUNCTYPE(None, REQUEST)
+  REQUEST_CALLBACK = CFUNCTYPE(None, POINTER(REQUEST))
 
   parser.slurp_init_request_parser.argtypes = []
   parser.slurp_init_request_parser.restype = None
@@ -21,7 +21,8 @@ def init():
 
   parser.slurp_init_request_parser()
 
-def parse(stream, request_callback):
+def parse(stream, on_request):
+
   def read_callback(read_buffer_ptr, max_read):
     read_buffer_address = addressof(read_buffer_ptr.contents)
     read_buffer = (c_char * max_read).from_address(read_buffer_address)
@@ -29,9 +30,10 @@ def parse(stream, request_callback):
     read_buffer[:len(chunk)] = chunk
     return len(chunk)
 
-  global READ_CALLBACK
+  def request_callback(request_ptr):
+    on_request(request_ptr.contents)
+
   read_callback_ptr = READ_CALLBACK(read_callback)
-  global REQUEST_CALLBACK
   request_callback_ptr = REQUEST_CALLBACK(request_callback)
 
   parser.slurp_on_request(request_callback_ptr)

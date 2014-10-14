@@ -5,7 +5,7 @@
 
 #include "slurp/request.h"
 
-static void request_callback(struct slurp_request request);
+static void request_callback(struct slurp_request* request);
 static uint8_t read_callback(char* dest, uint8_t max_read);
 
 static char input[64];
@@ -23,8 +23,8 @@ int main(int argc, char **argv) {
   }
 }
 
-static void request_callback(struct slurp_request request) {
-  printf("Request: %s.%s\n", request.program, request.request);
+static void request_callback(struct slurp_request* request) {
+  printf("Request: %s.%s\n", request->program, request->request);
 }
 
 static uint8_t read_callback(char* dest, uint8_t max_read) {

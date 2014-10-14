@@ -9,15 +9,8 @@ struct slurp_request {
   // uint8_t args_length;
 };
 
-// struct slurp_parse_context {
-//   struct buffer* input_buffer;
-//   struct buffer* parse_buffer;
-// }
-
 typedef uint8_t (*slurp_read_callback)(char* dest, uint8_t max_read);
 
-typedef void(*slurp_request_callback)(struct slurp_request request);
-
-// void slurp_init_server(slurp_request_callback request_callback);
+typedef void(*slurp_request_callback)(struct slurp_request* request);
 
 #endif
