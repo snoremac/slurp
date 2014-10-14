@@ -7,6 +7,7 @@
 
 static void request_callback(struct slurp_request* request);
 static uint8_t read_callback(char* dest, uint8_t max_read);
+static void error_callback(struct slurp_error* error);
 
 static char input[64];
 static uint8_t current_index;
@@ -14,12 +15,10 @@ static uint8_t current_index;
 int main(int argc, char **argv) {
   slurp_init_request_parser();
   slurp_on_request(request_callback);
-  if (argc > 1) {
-    strncpy(input, argv[1], strlen(argv[1]));
-    uint8_t result = slurp_parse_request(read_callback);
-    if (result > 0) {
-      printf("Parse returned error: %u\n", result);
-    }
+  for (uint8_t i = 1; i < argc; i++) {
+    strncpy(input, argv[i], sizeof(input));
+    current_index = 0;
+    slurp_parse_request(read_callback, error_callback);
   }
 }
 
@@ -35,4 +34,8 @@ static uint8_t read_callback(char* dest, uint8_t max_read) {
   }
   current_index += i;
   return i;
+}
+
+static void error_callback(struct slurp_error* error) {
+  printf("Parser returned error: %u\n", error->code);
 }

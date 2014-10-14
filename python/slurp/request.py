@@ -8,20 +8,21 @@ def init():
   global parser
   parser = cdll.LoadLibrary(path.dirname(path.realpath(__file__)) + "/../../core/slurp/libslurp.so")
 
-  global READ_CALLBACK, REQUEST_CALLBACK
+  global READ_CALLBACK, REQUEST_CALLBACK, ERROR_CALLBACK
   READ_CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_int)
   REQUEST_CALLBACK = CFUNCTYPE(None, POINTER(REQUEST))
+  ERROR_CALLBACK = CFUNCTYPE(None, POINTER(ERROR))
 
   parser.slurp_init_request_parser.argtypes = []
   parser.slurp_init_request_parser.restype = None
   parser.slurp_on_request.argtypes = [REQUEST_CALLBACK]
   parser.slurp_on_request.restype = None
   parser.slurp_parse_request.argtypes = [READ_CALLBACK]
-  parser.slurp_parse_request.restype = c_int
+  parser.slurp_parse_request.restype = None
 
   parser.slurp_init_request_parser()
 
-def parse(stream, on_request):
+def parse(stream, on_request, on_error):
 
   def read_callback(read_buffer_ptr, max_read):
     read_buffer_address = addressof(read_buffer_ptr.contents)
@@ -33,11 +34,15 @@ def parse(stream, on_request):
   def request_callback(request_ptr):
     on_request(request_ptr.contents)
 
+  def error_callback(error_ptr):
+    on_error(error_ptr.contents)
+
   read_callback_ptr = READ_CALLBACK(read_callback)
   request_callback_ptr = REQUEST_CALLBACK(request_callback)
+  error_callback_ptr = ERROR_CALLBACK(error_callback)
 
   parser.slurp_on_request(request_callback_ptr)
-  parser.slurp_parse_request(read_callback_ptr)
+  parser.slurp_parse_request(read_callback_ptr, error_callback_ptr)
 
 class Frame(object):
 
@@ -88,4 +93,9 @@ class REQUEST(Structure):
   _fields_ = [
     ("program", c_char * 8),
     ("request", c_char * 8)
+  ]
+
+class ERROR(Structure):
+  _fields_ = [
+    ("code", c_int)
   ]

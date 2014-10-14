@@ -5,7 +5,7 @@ import struct
 from slurp import request
 
 basic_request = request.Request("chaser", "start")
-basic_request_str = "~chaser,starts~"
+basic_request_str = "~chaser,start~"
 
 geo_request = request.Request("geo", "map", lat = 120, lon = -30, zoom = 3)
 geo_request_str = "~geo,map,lat,\x00\x00\x00x,lon,\xff\xff\xff\xe2,zoom,\x00\x00\x00\x03\xa7\x9b\x91\x7f~"
@@ -22,5 +22,8 @@ def test_can_be_parsed_from_a_stream():
 		assert request.program == basic_request.program
 		assert request.request == basic_request.request
 
+	def error_callback(error):
+		assert False
+
 	stream = StringIO.StringIO(basic_request_str);
-	request.parse(stream, request_callback)
+	request.parse(stream, request_callback, error_callback)
