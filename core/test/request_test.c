@@ -40,8 +40,22 @@ void tearDown() {
 void test_request_without_args(){
   parse("~chaser,start~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
+}
+
+void test_request_with_args(){
+  parse("~chaser,trail,length,\x08,bright,\xff~");
+  TEST_ASSERT_EQUAL_UINT(1, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
+  TEST_ASSERT_EQUAL_STRING("trail", requests[0].request);
+  TEST_ASSERT_EQUAL_UINT(2, requests[0].args_length);
+  TEST_ASSERT_EQUAL_STRING("length", requests[0].arg_names[0]);
+  TEST_ASSERT_EQUAL_STRING("\x08", requests[0].arg_values[0]);
+  TEST_ASSERT_EQUAL_STRING("bright", requests[0].arg_names[1]);
+  TEST_ASSERT_EQUAL_STRING("\xff", requests[0].arg_values[1]);
 }
 
 void test_split_request_without_args(){
@@ -52,17 +66,44 @@ void test_split_request_without_args(){
   parse("art");
   parse("~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_consecutive_requests_no_args(){
-  parse("~chaser,start~~chaser,stop~");
-  TEST_ASSERT_EQUAL_UINT(2, request_count);
+void test_split_request_with_args(){
+  parse("~chas");
+  parse("er");
+  parse(",");
+  parse("tra");
+  parse("il,len");
+  parse("gth,");
+  parse("\x08");
+  parse("~");
+  TEST_ASSERT_EQUAL_UINT(1, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
+  TEST_ASSERT_EQUAL_STRING("trail", requests[0].request);
+  TEST_ASSERT_EQUAL_UINT(1, requests[0].args_length);
+  TEST_ASSERT_EQUAL_STRING("length", requests[0].arg_names[0]);
+  TEST_ASSERT_EQUAL_STRING("\x08", requests[0].arg_values[0]);
+}
+
+void test_consecutive_mixed_requests(){
+  parse("~chaser,start~~chaser,trail,length,\x08,bright,\xff~~chaser,stop~");
+  TEST_ASSERT_EQUAL_UINT(3, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[1].program);
-  TEST_ASSERT_EQUAL_STRING("stop", requests[1].request);
+  TEST_ASSERT_EQUAL_STRING("trail", requests[1].request);
+  TEST_ASSERT_EQUAL_UINT(2, requests[1].args_length);
+  TEST_ASSERT_EQUAL_STRING("length", requests[1].arg_names[0]);
+  TEST_ASSERT_EQUAL_STRING("\x08", requests[1].arg_values[0]);
+  TEST_ASSERT_EQUAL_STRING("bright", requests[1].arg_names[1]);
+  TEST_ASSERT_EQUAL_STRING("\xff", requests[1].arg_values[1]);
+  TEST_ASSERT_EQUAL_STRING("chaser", requests[2].program);
+  TEST_ASSERT_EQUAL_STRING("stop", requests[2].request);
 }
 
 void test_consecutive_split_requests_no_args(){
@@ -72,6 +113,7 @@ void test_consecutive_split_requests_no_args(){
   parse("chaser");
   parse(",stop~");
   TEST_ASSERT_EQUAL_UINT(2, request_count);
+  TEST_ASSERT_EQUAL_UINT(0, error_count);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[0].program);
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
   TEST_ASSERT_EQUAL_STRING("chaser", requests[1].program);

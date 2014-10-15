@@ -3,16 +3,23 @@
 
 #include <stdint.h>
 
+#define SLURP_REQUEST_PROGRAM_LENGTH 8
+#define SLURP_REQUEST_REQUEST_LENGTH 8
+#define SLURP_REQUEST_ARG_NAME_LENGTH 8
+#define SLURP_REQUEST_ARG_VALUE_LENGTH 4
+#define SLURP_REQUEST_MAX_ARGS 4
+
 #define SLURP_ERROR_FRAMING 1
 #define SLURP_ERROR_MISSING_PROGRAM 2
 #define SLURP_ERROR_MISSING_REQUEST 3
+#define SLURP_ERROR_MISSING_ARG_VALUE 4
 
 struct slurp_request {
-  char program[8];
-  char request[8];
-  // char arg_names[4][8];
-  // char arg_values[4][4];
-  // uint8_t args_length;
+  char program[SLURP_REQUEST_PROGRAM_LENGTH];
+  char request[SLURP_REQUEST_REQUEST_LENGTH];
+  char arg_names[SLURP_REQUEST_MAX_ARGS][SLURP_REQUEST_ARG_NAME_LENGTH];
+  char arg_values[SLURP_REQUEST_MAX_ARGS][SLURP_REQUEST_ARG_VALUE_LENGTH];
+  uint8_t args_length;
 };
 
 struct slurp_error {

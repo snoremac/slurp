@@ -11,6 +11,7 @@
 // 0x7e: ~
 // 0x5d: ]
 // 0x5e: ^
+// 0x2c: ,
 
 %%{
   machine slurp;
@@ -29,12 +30,35 @@
   }
 
   action end_program {
-    strlcpy(current_request.program, field_start, fmin((p - field_start) + 1, sizeof(current_request.program)));
+    strlcpy(current_request.program, field_start, fmin((p - field_start) + 1, SLURP_REQUEST_PROGRAM_LENGTH));
     field_start = 0;
   }
 
   action end_request {
-    strlcpy(current_request.request, field_start, fmin((p - field_start) + 1, sizeof(current_request.request)));
+    strlcpy(current_request.request, field_start, fmin((p - field_start) + 1, SLURP_REQUEST_REQUEST_LENGTH));
+    field_start = 0;
+  }
+
+  action end_arg_name {
+    if (current_request.args_length < SLURP_REQUEST_MAX_ARGS) {
+      strlcpy(
+        current_request.arg_names[current_request.args_length],
+        field_start,
+        fmin((p - field_start) + 1, SLURP_REQUEST_ARG_NAME_LENGTH)
+      );
+    }
+    field_start = 0;
+  }
+
+  action end_arg_value {
+    if (current_request.args_length < SLURP_REQUEST_MAX_ARGS) {
+      strlcpy(
+        current_request.arg_values[current_request.args_length],
+        field_start,
+        fmin((p - field_start) + 1, SLURP_REQUEST_ARG_VALUE_LENGTH)
+      );
+      current_request.args_length++;
+    }
     field_start = 0;
   }
 
@@ -61,6 +85,12 @@
     fgoto payload_error;
   }
 
+  action start_arg_value_error {
+    struct slurp_error error = (struct slurp_error) { .code = SLURP_ERROR_MISSING_ARG_VALUE };
+    error_callback(&error);
+    fgoto payload_error;
+  }
+
   action end_payload_error {
     fhold;
     fgoto main;
@@ -70,20 +100,24 @@
   escape = 0x7d;
   escaped_boundary = escape 0x5e;
   escaped_escape = escape 0x5d;
+  field_delim = 0x2c;
 
-  field_delim = ",";
   byte = (any - (frame_boundary | escape | field_delim));
-  #field = (byte | escaped_boundary | escaped_escape)+;
-  field = (byte)+;
+  field = (byte | escaped_boundary | escaped_escape)+;
+
+  program = field >start_field %end_program;
+  request = field >start_field %end_request;
+  arg_name = field >start_field %end_arg_name;
+  arg_value = field >start_field %end_arg_value;
 
   frame_error := (^frame_boundary)* frame_boundary @end_frame_error;
   payload_error := (^frame_boundary)* frame_boundary @end_payload_error;
 
   main :=
     frame_boundary @!start_frame_error >start_frame
-    field @!start_program_error >start_field %end_program
-    field_delim @!start_request_error
-    field @!start_request_error >start_field %end_request
+    program @!start_program_error
+    (field_delim request) @!start_request_error
+    (field_delim (arg_name (field_delim arg_value) @!start_arg_value_error)?)*
     frame_boundary >end_frame
   ;
 }%%

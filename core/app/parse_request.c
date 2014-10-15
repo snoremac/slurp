@@ -23,7 +23,14 @@ int main(int argc, char **argv) {
 }
 
 static void request_callback(struct slurp_request* request) {
-  printf("Request: %s.%s\n", request->program, request->request);
+  printf("Request: %s.%s(", request->program, request->request);
+  for (int i = 0; i < request->args_length; i++) {
+    printf("%s = %s",  request->arg_names[i],  request->arg_values[i]);
+    if (i + 1 <  request->args_length) {
+      printf(", ");
+    }
+  }
+  printf(")\n");
 }
 
 static uint8_t read_callback(char* dest, uint8_t max_read) {
@@ -37,5 +44,5 @@ static uint8_t read_callback(char* dest, uint8_t max_read) {
 }
 
 static void error_callback(struct slurp_error* error) {
-  printf("Parser returned error: %u\n", error->code);
+  printf("Parse error: %u\n", error->code);
 }
