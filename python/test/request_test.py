@@ -47,3 +47,14 @@ def test_geo_request_can_be_parsed_from_a_stream():
 
 	stream = StringIO.StringIO(geo_request_str);
 	request.parse(stream, request_callback, error_callback)
+
+def test_parse_error_on_data_outside_of_frame():
+	def request_callback(request):
+		assert request.program == basic_request.program
+		assert request.request == basic_request.request
+
+	def error_callback(error):
+		assert error.code == request.Error.SLURP_ERROR_FRAMING
+
+	stream = StringIO.StringIO("data" + basic_request_str);
+	request.parse(stream, request_callback, error_callback)

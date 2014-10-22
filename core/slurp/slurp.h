@@ -19,11 +19,11 @@ struct slurp_request {
   char request[SLURP_REQUEST_REQUEST_LENGTH];
   char arg_names[SLURP_REQUEST_MAX_ARGS][SLURP_REQUEST_ARG_NAME_LENGTH];
   char arg_values[SLURP_REQUEST_MAX_ARGS][SLURP_REQUEST_ARG_VALUE_LENGTH];
-  uint8_t args_length;
+  uint32_t args_length;
 };
 
 struct slurp_error {
-  uint8_t code;
+  uint32_t code;
 };
 
 typedef uint8_t(*slurp_read_callback)(char* dest, uint8_t max_read);

@@ -17,7 +17,7 @@ def init():
   parser.slurp_init_request_parser.restype = None
   parser.slurp_on_request.argtypes = [REQUEST_CALLBACK]
   parser.slurp_on_request.restype = None
-  parser.slurp_parse_request.argtypes = [READ_CALLBACK]
+  parser.slurp_parse_request.argtypes = [READ_CALLBACK, ERROR_CALLBACK]
   parser.slurp_parse_request.restype = None
 
   parser.slurp_init_request_parser()
@@ -108,6 +108,11 @@ class Request(Frame, Structure):
     stream.write(self.to_str())
 
 class Error(Structure):
+
+  SLURP_ERROR_FRAMING = 1
+  SLURP_ERROR_MISSING_PROGRAM = 2
+  SLURP_ERROR_MISSING_REQUEST = 3
+  SLURP_ERROR_MISSING_ARG_VALUE = 4
 
   _fields_ = [
     ("code", c_int)
