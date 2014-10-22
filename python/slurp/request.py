@@ -10,8 +10,8 @@ def init():
 
   global READ_CALLBACK, REQUEST_CALLBACK, ERROR_CALLBACK
   READ_CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_int)
-  REQUEST_CALLBACK = CFUNCTYPE(None, POINTER(REQUEST))
-  ERROR_CALLBACK = CFUNCTYPE(None, POINTER(ERROR))
+  REQUEST_CALLBACK = CFUNCTYPE(None, POINTER(Request))
+  ERROR_CALLBACK = CFUNCTYPE(None, POINTER(Error))
 
   parser.slurp_init_request_parser.argtypes = []
   parser.slurp_init_request_parser.restype = None
@@ -51,14 +51,32 @@ class Frame(object):
   def __init__(self):
     pass
 
-class Request(Frame):
+class Request(Frame, Structure):
 
   DELIM =","
 
-  def __init__(self, program, request, **kwargs):
+  _fields_ = [
+    ("program", c_char * 8),
+    ("request", c_char * 8),
+    ("arg_names", (c_char * 8) * 4),
+    ("arg_values", (c_char * 4) * 4),
+    ("args_length", c_int)
+  ]
+
+  def __init__(self, program, request, **args):
     self.program = program
     self.request = request
-    self.kwargs = kwargs
+    for index, key in enumerate(args.keys()):
+      if (index < 4):
+        self.args_length += 1
+      else:
+        break
+      self.arg_names[index] = create_string_buffer(key, 8)
+      self.arg_values[index] = create_string_buffer(self.arg_to_bytes(args[key]), 4)
+
+  def arg(self, name):
+    arg_indexes = [index for index, key in enumerate(self.arg_names) if key.value == name]
+    return self.arg_values[arg_indexes[0]].raw if arg_indexes else None
 
   def to_bytes(self):
     return [ord(char) for char in self.to_str()]
@@ -67,12 +85,12 @@ class Request(Frame):
     return "".join([Frame.DELIM, self.payload_to_str(), self.crc_to_str(), Frame.DELIM])
 
   def payload_to_str(self):
-    return Request.DELIM.join([self.program, self.request, self.kwargs_to_str()])
+    return Request.DELIM.join([self.program, self.request, self.args_to_str()])
 
-  def kwargs_to_str(self):
+  def args_to_str(self):
     return Request.DELIM.join([
-      Request.DELIM.join([key, self.arg_to_bytes(value)])
-      for key, value in self.kwargs.iteritems()
+      Request.DELIM.join([self.arg_names[index].value, self.arg_values[index].raw])
+      for index in range(self.args_length)
     ])
 
   def crc_to_str(self):
@@ -89,13 +107,11 @@ class Request(Frame):
   def send(self, stream):
     stream.write(self.to_str())
 
-class REQUEST(Structure):
-  _fields_ = [
-    ("program", c_char * 8),
-    ("request", c_char * 8)
-  ]
+class Error(Structure):
 
-class ERROR(Structure):
   _fields_ = [
     ("code", c_int)
   ]
+
+  def __init__(self, code, **args):
+    self.code = code

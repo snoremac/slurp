@@ -29,6 +29,14 @@
     field_start = p;
   }
 
+  action end_escape {
+    memmove(p - 1, p, pe - p);
+    fhold;
+    *pe = 0;
+    *p |= 0x20;
+    pe--;
+  }
+
   action end_program {
     strlcpy(current_request.program, field_start, fmin((p - field_start) + 1, SLURP_REQUEST_PROGRAM_LENGTH));
     field_start = 0;
@@ -103,7 +111,7 @@
   field_delim = 0x2c;
 
   byte = (any - (frame_boundary | escape | field_delim));
-  field = (byte | escaped_boundary | escaped_escape)+;
+  field = (byte | escaped_boundary @end_escape | escaped_escape @end_escape)+;
 
   program = field >start_field %end_program;
   request = field >start_field %end_request;
