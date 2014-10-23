@@ -5,22 +5,24 @@ import struct
 from os import path
 
 def init():
-  global parser
-  parser = cdll.LoadLibrary(path.dirname(path.realpath(__file__)) + "/../../core/slurp/libslurp.so")
+  global slurp
+  slurp = cdll.LoadLibrary(path.dirname(path.realpath(__file__)) + "/../../core/slurp/libslurp.so")
 
   global READ_CALLBACK, REQUEST_CALLBACK, ERROR_CALLBACK
   READ_CALLBACK = CFUNCTYPE(c_int, POINTER(c_char), c_int)
   REQUEST_CALLBACK = CFUNCTYPE(None, POINTER(Request))
   ERROR_CALLBACK = CFUNCTYPE(None, POINTER(Error))
 
-  parser.slurp_init_request_parser.argtypes = []
-  parser.slurp_init_request_parser.restype = None
-  parser.slurp_on_request.argtypes = [REQUEST_CALLBACK]
-  parser.slurp_on_request.restype = None
-  parser.slurp_parse_request.argtypes = [READ_CALLBACK, ERROR_CALLBACK]
-  parser.slurp_parse_request.restype = None
+  slurp.slurp_init_request_parser.argtypes = []
+  slurp.slurp_init_request_parser.restype = None
+  slurp.slurp_on_request.argtypes = [REQUEST_CALLBACK]
+  slurp.slurp_on_request.restype = None
+  slurp.slurp_parse_request.argtypes = [READ_CALLBACK, ERROR_CALLBACK]
+  slurp.slurp_parse_request.restype = None
+  slurp.slurp_serialize_request.argtypes = [POINTER(Request), POINTER(c_char), c_int]
+  slurp.slurp_serialize_request.restype = c_int
 
-  parser.slurp_init_request_parser()
+  slurp.slurp_init_request_parser()
 
 def parse(stream, on_request, on_error):
 
@@ -41,8 +43,8 @@ def parse(stream, on_request, on_error):
   request_callback_ptr = REQUEST_CALLBACK(request_callback)
   error_callback_ptr = ERROR_CALLBACK(error_callback)
 
-  parser.slurp_on_request(request_callback_ptr)
-  parser.slurp_parse_request(read_callback_ptr, error_callback_ptr)
+  slurp.slurp_on_request(request_callback_ptr)
+  slurp.slurp_parse_request(read_callback_ptr, error_callback_ptr)
 
 class Frame(object):
 
@@ -54,6 +56,7 @@ class Frame(object):
 class Request(Frame, Structure):
 
   DELIM =","
+  MAX_LENGTH = 80
 
   _fields_ = [
     ("program", c_char * 8),
@@ -78,34 +81,17 @@ class Request(Frame, Structure):
     arg_indexes = [index for index, key in enumerate(self.arg_names) if key.value == name]
     return self.arg_values[arg_indexes[0]].raw if arg_indexes else None
 
-  def to_bytes(self):
-    return [ord(char) for char in self.to_str()]
-
-  def to_str(self):
-    return "".join([Frame.DELIM, self.payload_to_str(), self.crc_to_str(), Frame.DELIM])
-
-  def payload_to_str(self):
-    return Request.DELIM.join([self.program, self.request, self.args_to_str()])
-
-  def args_to_str(self):
-    return Request.DELIM.join([
-      Request.DELIM.join([self.arg_names[index].value, self.arg_values[index].raw])
-      for index in range(self.args_length)
-    ])
-
-  def crc_to_str(self):
-    return struct.pack('>l ', self.crc())
-
-  def crc(self):
-    return binascii.crc32(self.payload_to_str())
-
   def arg_to_bytes(self, value):
     return {
       int: lambda value: struct.pack('>l ', value)
     }.get(type(value), lambda value: "")(value)
 
   def send(self, stream):
-    stream.write(self.to_str())
+    request_buffer = create_string_buffer(Request.MAX_LENGTH)
+    length = slurp.slurp_serialize_request(byref(self), c_char_p(addressof(request_buffer)), Request.MAX_LENGTH)
+    if length == 0:
+      raise StandardError("Serialized request was truncated at " + Request.MAX_LENGTH);
+    stream.write(request_buffer.raw[:length])
 
 class Error(Structure):
 

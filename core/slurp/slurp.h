@@ -1,7 +1,10 @@
 #ifndef SLURP_SLURP_H
 #define SLURP_SLURP_H
 
+#include <stdbool.h>
 #include <stdint.h>
+
+#define SLURP_REQUEST_MAX_LENGTH 80
 
 #define SLURP_REQUEST_PROGRAM_LENGTH 8
 #define SLURP_REQUEST_REQUEST_LENGTH 8
@@ -24,6 +27,13 @@ struct slurp_request {
 
 struct slurp_error {
   uint32_t code;
+};
+
+struct serialize_buffer {
+  char* buffer;
+  uint8_t max_length;
+  uint8_t current_length;
+  bool truncated;
 };
 
 typedef uint8_t(*slurp_read_callback)(char* dest, uint8_t max_read);

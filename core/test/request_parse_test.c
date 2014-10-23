@@ -37,7 +37,7 @@ void setUp() {
 void tearDown() {
 }
 
-void test_request_without_args(){
+void test_parse_request_without_args() {
   parse("~chaser,start~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
   TEST_ASSERT_EQUAL_UINT(0, error_count);
@@ -45,7 +45,7 @@ void test_request_without_args(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_request_with_args(){
+void test_parse_request_with_args() {
   parse("~chaser,trail,length,\x08,bright,\xff~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
   TEST_ASSERT_EQUAL_UINT(0, error_count);
@@ -58,7 +58,7 @@ void test_request_with_args(){
   TEST_ASSERT_EQUAL_STRING("\xff", requests[0].arg_values[1]);
 }
 
-void test_split_request_without_args(){
+void test_parse_split_request_without_args() {
   parse("~chas");
   parse("er");
   parse(",");
@@ -71,7 +71,7 @@ void test_split_request_without_args(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_split_request_with_args(){
+void test_parse_split_request_with_args() {
   parse("~chas");
   parse("er");
   parse(",");
@@ -89,7 +89,7 @@ void test_split_request_with_args(){
   TEST_ASSERT_EQUAL_STRING("\x08", requests[0].arg_values[0]);
 }
 
-void test_consecutive_mixed_requests(){
+void test_parse_consecutive_mixed_requests() {
   parse("~chaser,start~~chaser,trail,length,\x08,bright,\xff~~chaser,stop~");
   TEST_ASSERT_EQUAL_UINT(3, request_count);
   TEST_ASSERT_EQUAL_UINT(0, error_count);
@@ -106,7 +106,7 @@ void test_consecutive_mixed_requests(){
   TEST_ASSERT_EQUAL_STRING("stop", requests[2].request);
 }
 
-void test_consecutive_split_requests_no_args(){
+void test_parse_consecutive_split_requests_no_args() {
   parse("~chas");
   parse("er,sta");
   parse("rt~~");
@@ -120,14 +120,14 @@ void test_consecutive_split_requests_no_args(){
   TEST_ASSERT_EQUAL_STRING("stop", requests[1].request);
 }
 
-void test_data_outside_frame(){
+void test_parse_data_outside_frame() {
   parse("data~");
   TEST_ASSERT_EQUAL_UINT(0, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
   TEST_ASSERT_EQUAL_UINT(SLURP_ERROR_FRAMING, errors[0].code);
 }
 
-void test_recovery_from_data_outside_frame(){
+void test_parse_recovery_from_data_outside_frame() {
   parse("data~chaser,start~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
@@ -136,14 +136,14 @@ void test_recovery_from_data_outside_frame(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_missing_program(){
+void test_parse_missing_program() {
   parse("~~");
   TEST_ASSERT_EQUAL_UINT(0, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
   TEST_ASSERT_EQUAL_UINT(SLURP_ERROR_MISSING_PROGRAM, errors[0].code);
 }
 
-void test_recovery_from_missing_program(){
+void test_parse_recovery_from_missing_program() {
   parse("~~~chaser,start~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
@@ -152,21 +152,21 @@ void test_recovery_from_missing_program(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_missing_request_with_delim(){
+void test_parse_missing_request_with_delim() {
   parse("~chaser,~");
   TEST_ASSERT_EQUAL_UINT(0, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
   TEST_ASSERT_EQUAL_UINT(SLURP_ERROR_MISSING_REQUEST, errors[0].code);
 }
 
-void test_missing_request_no_delim(){
+void test_parse_missing_request_no_delim() {
   parse("~chaser~");
   TEST_ASSERT_EQUAL_UINT(0, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
   TEST_ASSERT_EQUAL_UINT(SLURP_ERROR_MISSING_REQUEST, errors[0].code);
 }
 
-void test_recovery_from_missing_request(){
+void test_parse_recovery_from_missing_request() {
   parse("~chaser~~chaser,start~");
   TEST_ASSERT_EQUAL_UINT(1, request_count);
   TEST_ASSERT_EQUAL_UINT(1, error_count);
@@ -175,7 +175,7 @@ void test_recovery_from_missing_request(){
   TEST_ASSERT_EQUAL_STRING("start", requests[0].request);
 }
 
-void test_consecutive_requests_and_errors(){
+void test_parse_consecutive_requests_and_errors() {
   parse("data~chaser,start~~chaser,~~chaser,stop~data");
   TEST_ASSERT_EQUAL_UINT(2, request_count);
   TEST_ASSERT_EQUAL_UINT(3, error_count);

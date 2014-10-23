@@ -6,6 +6,8 @@
 #include "slurp/request.h"
 
 #define PARSE_BUFFER_SIZE 64
+#define FRAME_BOUNDARY "~"
+#define FIELD_DELIM ","
 
 // 0x7d: }
 // 0x7e: ~
@@ -141,6 +143,10 @@ static int8_t cs;
 static char parse_buffer[PARSE_BUFFER_SIZE];
 static uint8_t buffer_held;
 
+static void serialize_payload(const struct slurp_request* request, struct serialize_buffer* buffer);
+static void serialize_args(const struct slurp_request* request, struct serialize_buffer* buffer);
+static void buffer_append(struct serialize_buffer* buffer, const char* append, uint8_t append_length);
+
 void slurp_init_request_parser() {
   %% write init;
 }
@@ -183,4 +189,40 @@ void slurp_parse_request(slurp_read_callback on_read, slurp_error_callback on_er
 
 void slurp_on_request(slurp_request_callback on_request) {
   request_callback = on_request;
+}
+
+uint8_t slurp_serialize_request(const struct slurp_request* request, char* request_buffer, uint8_t request_buffer_length) {
+  struct serialize_buffer buffer = {
+    .buffer = request_buffer,
+    .max_length = request_buffer_length,
+    .current_length = 0
+  };
+
+  buffer_append(&buffer, FRAME_BOUNDARY, strlen(FRAME_BOUNDARY));
+  serialize_payload(request, &buffer);
+  buffer_append(&buffer, FRAME_BOUNDARY, strlen(FRAME_BOUNDARY));
+  return buffer.truncated ? 0 : buffer.current_length;
+}
+
+static void serialize_payload(const struct slurp_request* request, struct serialize_buffer* buffer) {
+  buffer_append(buffer, request->program, strlen(request->program));
+  buffer_append(buffer, FIELD_DELIM, strlen(FIELD_DELIM));
+  buffer_append(buffer, request->request, strlen(request->request));
+  serialize_args(request, buffer);
+}
+
+static void serialize_args(const struct slurp_request* request, struct serialize_buffer* buffer) {
+  for (uint8_t i = 0; i < request->args_length; i++) {
+    buffer_append(buffer, FIELD_DELIM, strlen(FIELD_DELIM));
+    buffer_append(buffer, request->arg_names[i], strlen(request->arg_names[i]));
+    buffer_append(buffer, FIELD_DELIM, strlen(FIELD_DELIM));
+    buffer_append(buffer, request->arg_values[i], SLURP_REQUEST_ARG_VALUE_LENGTH);
+  }
+}
+
+static void buffer_append(struct serialize_buffer* buffer, const char* append, uint8_t append_length) {
+  uint8_t checked_append_length = fmin(append_length, buffer->max_length - buffer->current_length);
+  memcpy(buffer->buffer + buffer->current_length, append, checked_append_length);
+  buffer->current_length += checked_append_length;
+  buffer->truncated = checked_append_length < append_length;
 }
